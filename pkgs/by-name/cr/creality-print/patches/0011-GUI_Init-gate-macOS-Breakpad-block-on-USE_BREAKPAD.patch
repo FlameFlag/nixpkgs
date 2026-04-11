@@ -1,0 +1,39 @@
+From 58fdc8c023541342e296f8f8f328ef43e0706463 Mon Sep 17 00:00:00 2001
+From: FlameFlag <git@ps1.sh>
+Date: Wed, 22 Apr 2026 17:29:43 +0300
+Subject: [PATCH] GUI_Init: gate macOS Breakpad block on USE_BREAKPAD
+
+Upstream gates the Breakpad include only on TARGET_OS_MAC and comments
+out the USE_BREAKPAD check, so any macOS build pulls in
+<client/mac/handler/exception_handler.h> even with ENABLE_BREAKPAD=OFF.
+Gate both the include and the ExceptionHandler registration on
+USE_BREAKPAD so builds without breakpad work.
+---
+ src/slic3r/GUI/GUI_Init.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/slic3r/GUI/GUI_Init.cpp b/src/slic3r/GUI/GUI_Init.cpp
+index 615f2c6..53f400d 100644
+--- a/src/slic3r/GUI/GUI_Init.cpp
++++ b/src/slic3r/GUI/GUI_Init.cpp
+@@ -21,7 +21,7 @@
+     #include <signal.h>
+     #include <unistd.h> // getpid, getppid
+ #endif // __APPLE__
+-#ifdef TARGET_OS_MAC
++#if defined(TARGET_OS_MAC) && defined(USE_BREAKPAD)
+     //#ifdef USE_BREAKPAD
+     #include "client/mac/handler/exception_handler.h"
+     //#endif
+@@ -79,7 +79,7 @@ int GUI_Run(GUI_InitParams &params)
+         GUI::GUI_App::SetInstance(gui);
+         gui->init_params = &params;
+         
+-        #ifdef TARGET_OS_MAC
++        #if defined(TARGET_OS_MAC) && defined(USE_BREAKPAD)
+             boost::filesystem::path   tempPath = boost::filesystem::path(wxFileName::GetTempDir().ToStdString());
+             BOOST_LOG_TRIVIAL(warning) << "macOS Breakpad: using tempPath=" << tempPath.string();
+             auto dmpCallBack = [](const char* dump_dir,
+-- 
+2.53.0
+

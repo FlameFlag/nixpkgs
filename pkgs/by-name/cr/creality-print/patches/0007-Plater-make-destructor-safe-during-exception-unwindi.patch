@@ -1,0 +1,50 @@
+From 3f5722ce15ab88677fda69f5052efd8c7c054477 Mon Sep 17 00:00:00 2001
+From: FlameFlag <github@flameflag.dev>
+Date: Mon, 13 Apr 2026 17:34:21 +0300
+Subject: [PATCH] Plater: make destructor safe during exception unwinding
+
+Guard notification_manager and m_tabpanel Unbind calls with null
+checks, and wrap the destructor body in try-catch to prevent
+SIGSEGV during stack unwinding when MainFrame construction throws.
+---
+ src/slic3r/GUI/Plater.cpp | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/src/slic3r/GUI/Plater.cpp b/src/slic3r/GUI/Plater.cpp
+index 5a8c83eb..3811072f 100644
+--- a/src/slic3r/GUI/Plater.cpp
++++ b/src/slic3r/GUI/Plater.cpp
+@@ -3962,11 +3962,25 @@ Plater::priv::priv(Plater* q, MainFrame* main_frame)
+ 
+ Plater::priv::~priv()
+ {
+-    if (config != nullptr)
+-        delete config;
+-    // Saves the database of visited (already shown) hints into hints.ini.
+-    notification_manager->deactivate_loaded_hints();
+-    main_frame->m_tabpanel->Unbind(wxEVT_NOTEBOOK_PAGE_CHANGING, &priv::on_tab_selection_changing, this);
++    try {
++        if (config != nullptr)
++            delete config;
++        // Saves the database of visited (already shown) hints into hints.ini.
++        if (notification_manager)
++            notification_manager->deactivate_loaded_hints();
++    } catch (...) {}
++
++    // Shut down the Mouse3DController thread before member destruction.
++    // Mouse3DController::init() starts a std::thread on Linux; the class
++    // has no destructor, so std::thread::~thread() on a joinable thread
++    // calls std::terminate().
++    try { mouse3d_controller.shutdown(); } catch (...) {}
++
++    // Do NOT Unbind from m_tabpanel here: during MainFrame construction
++    // failure the tabpanel's internal event-handler structures may already
++    // be partially destroyed, causing SIGSEGV inside
++    // wxEvtHandler::GetNextDynamicEntry().  wxWidgets automatically
++    // cleans up all event bindings when the window is destroyed.
+ }
+ 
+ void Plater::priv::update(unsigned int flags)
+-- 
+2.53.0
+

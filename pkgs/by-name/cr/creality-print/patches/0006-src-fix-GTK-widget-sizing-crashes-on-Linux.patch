@@ -1,0 +1,363 @@
+From a407d07e0d7338cf4d047d20caa5f41d4c5b3f6b Mon Sep 17 00:00:00 2001
+From: FlameFlag <github@flameflag.dev>
+Date: Fri, 1 May 2026 23:41:16 +0300
+Subject: [PATCH] src: fix GTK widget sizing crashes on Linux
+
+FromDIP(-1) incorrectly scales the -1 sentinel value (meaning
+'auto-calculate') through DPI conversion, producing values like -2
+or -3 that violate GTK's gtk_widget_set_size_request assertion
+(width >= -1). Replace all FromDIP(-1) with plain -1.
+
+Also guard gtk_cell_layout_get_cells() with a GTK_IS_CELL_LAYOUT
+type check since ComboBox may not implement the CellLayout interface
+on all GTK3 configurations.
+---
+ src/slic3r/GUI/AICloudServiceDialog.cpp | 80 ++++++++++++-------------
+ src/slic3r/GUI/AboutDialog.cpp          |  2 +-
+ src/slic3r/GUI/AmsMappingPopup.cpp      |  2 +-
+ src/slic3r/GUI/CreatePresetsDialog.cpp  | 12 ++--
+ src/slic3r/GUI/PresetComboBoxes.cpp     |  1 +
+ src/slic3r/GUI/UpgradePanel.cpp         |  8 +--
+ src/slic3r/GUI/Widgets/SideTools.cpp    |  6 +-
+ 7 files changed, 56 insertions(+), 55 deletions(-)
+
+diff --git a/src/slic3r/GUI/AICloudServiceDialog.cpp b/src/slic3r/GUI/AICloudServiceDialog.cpp
+index 4040bb27..7c2fb6aa 100644
+--- a/src/slic3r/GUI/AICloudServiceDialog.cpp
++++ b/src/slic3r/GUI/AICloudServiceDialog.cpp
+@@ -406,8 +406,8 @@ AICloudService_ResultListItem::AICloudService_ResultListItem(wxWindow* parent, w
+     wxString bgColor  = wxGetApp().dark_mode() ? "#313131" : "#FFFFFF";
+     wxString bgColor2 = wxGetApp().dark_mode() ? "#2B2B2B" : "#EFF0F6";
+     wxString fgColor = wxGetApp().dark_mode() ? "#FFFFFF" : "#30373D";
+-    this->SetMinSize(wxSize(FromDIP(-1), itemSize.GetHeight()));
+-    this->SetMaxSize(wxSize(FromDIP(-1), itemSize.GetHeight()));
++    this->SetMinSize(wxSize(-1, itemSize.GetHeight()));
++    this->SetMaxSize(wxSize(-1, itemSize.GetHeight()));
+     this->SetBackgroundColour(bgColor);
+     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
+     this->SetSizer(m_mainSizer);
+@@ -551,8 +551,8 @@ void AICloudService_ResultDialog::build_dialog()
+     auto main_sizer = new wxBoxSizer(wxVERTICAL);
+     SetSizer(main_sizer);
+     wxPanel* panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(470)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(470)));
++    panel->SetMinSize(wxSize(-1, FromDIP(470)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(470)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -575,8 +575,8 @@ void AICloudService_ResultDialog::build_dialog()
+     m_scrolled_window->SetSizer(m_scrolled_window_sizer);
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(48)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(48)));
++    panel->SetMinSize(wxSize(-1, FromDIP(48)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(48)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1049,8 +1049,8 @@ void AICloudService_ProgressDialog::build_dialog()
+     auto main_sizer = new wxBoxSizer(wxVERTICAL);
+     SetSizer(main_sizer);
+     wxPanel* panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(32)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(32)));
++    panel->SetMinSize(wxSize(-1, FromDIP(32)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(32)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1059,14 +1059,14 @@ void AICloudService_ProgressDialog::build_dialog()
+     panel->SetSizer(panelSizer);
+     panelSizer->AddStretchSpacer();
+     m_timeoutText = new wxStaticText(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+-    m_timeoutText->SetMinSize(wxSize(FromDIP(100), FromDIP(-1)));
+-    m_timeoutText->SetMaxSize(wxSize(FromDIP(100), FromDIP(-1)));
++    m_timeoutText->SetMinSize(wxSize(FromDIP(100), -1));
++    m_timeoutText->SetMaxSize(wxSize(FromDIP(100), -1));
+     m_timeoutText->SetForegroundColour(wxGetApp().dark_mode() ? "#3C3C3C" : "#F2F2F2");
+     panelSizer->Add(m_timeoutText, 1, wxRIGHT | wxALIGN_RIGHT, FromDIP(40));
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(96)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(96)));
++    panel->SetMinSize(wxSize(-1, FromDIP(96)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(96)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1087,8 +1087,8 @@ void AICloudService_ProgressDialog::build_dialog()
+     panelSizer->Add(m_queueText, 1, wxEXPAND | wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(40));
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(64)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(64)));
++    panel->SetMinSize(wxSize(-1, FromDIP(64)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(64)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1097,8 +1097,8 @@ void AICloudService_ProgressDialog::build_dialog()
+     panel->SetSizer(panelSizer);
+     panelSizer->AddStretchSpacer();
+     m_progressBar = new ProgressBar(panel);
+-    m_progressBar->SetMinSize(wxSize(FromDIP(-1), FromDIP(10)));
+-    m_progressBar->SetMaxSize(wxSize(FromDIP(-1), FromDIP(10)));
++    m_progressBar->SetMinSize(wxSize(-1, FromDIP(10)));
++    m_progressBar->SetMaxSize(wxSize(-1, FromDIP(10)));
+     m_progressBar->SetBackgroundColour(bgColor);
+     m_progressBar->SetProgressForedColour(wxGetApp().dark_mode() ? wxColour("#505052") : wxColour("#E1E4E9"));
+     m_progressBar->SetProgressBackgroundColour(wxColour("#1FCA63"));
+@@ -1107,8 +1107,8 @@ void AICloudService_ProgressDialog::build_dialog()
+     panelSizer->Add(m_progressBar, 1, wxEXPAND | wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, FromDIP(40));
+ 
+     wxPanel* textPanel = new wxPanel(panel, wxID_ANY);
+-    textPanel->SetMinSize(wxSize(FromDIP(-1), FromDIP(32)));
+-    textPanel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(32)));
++    textPanel->SetMinSize(wxSize(-1, FromDIP(32)));
++    textPanel->SetMaxSize(wxSize(-1, FromDIP(32)));
+     textPanel->SetFont(Label::Body_13);
+     textPanel->SetBackgroundColour(bgColor);
+     textPanel->SetForegroundColour(fgColor);
+@@ -1116,15 +1116,15 @@ void AICloudService_ProgressDialog::build_dialog()
+     textPanel->SetSizer(textPanelSizer);
+     panelSizer->Add(textPanel, 1, wxEXPAND | wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(1));
+     m_progressText = new wxStaticText(textPanel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+-    m_progressText->SetMinSize(wxSize(FromDIP(100), FromDIP(-1)));
+-    m_progressText->SetMaxSize(wxSize(FromDIP(100), FromDIP(-1)));
++    m_progressText->SetMinSize(wxSize(FromDIP(100), -1));
++    m_progressText->SetMaxSize(wxSize(FromDIP(100), -1));
+     m_progressText->SetForegroundColour(fgColor);
+     textPanelSizer->AddStretchSpacer();
+     textPanelSizer->Add(m_progressText, 1, wxRIGHT | wxALIGN_RIGHT, FromDIP(40));
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(32)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(32)));
++    panel->SetMinSize(wxSize(-1, FromDIP(32)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(32)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1250,8 +1250,8 @@ void AICloudService_QueueDialog::build_dialog()
+     auto main_sizer = new wxBoxSizer(wxVERTICAL);
+     SetSizer(main_sizer);
+     wxPanel* panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(32)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(32)));
++    panel->SetMinSize(wxSize(-1, FromDIP(32)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(32)));
+     panel->SetFont(Label::Body_16);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1264,8 +1264,8 @@ void AICloudService_QueueDialog::build_dialog()
+     panelSizer->AddStretchSpacer();
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(58)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(58)));
++    panel->SetMinSize(wxSize(-1, FromDIP(58)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(58)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1286,8 +1286,8 @@ void AICloudService_QueueDialog::build_dialog()
+     panelSizer->AddStretchSpacer();
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(32)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(32)));
++    panel->SetMinSize(wxSize(-1, FromDIP(32)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(32)));
+     panel->SetFont(Label::Body_16);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1300,8 +1300,8 @@ void AICloudService_QueueDialog::build_dialog()
+     panelSizer->AddStretchSpacer();
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(32)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(32)));
++    panel->SetMinSize(wxSize(-1, FromDIP(32)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(32)));
+     panel->SetFont(Label::Body_13);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1371,8 +1371,8 @@ void AICloudService_TipDialog::build_dialog()
+     SetSizer(main_sizer);
+ 
+     wxPanel* panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(40)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(40)));
++    panel->SetMinSize(wxSize(-1, FromDIP(40)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(40)));
+     panel->SetFont(Label::Body_16);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+@@ -1383,8 +1383,8 @@ void AICloudService_TipDialog::build_dialog()
+     panelSizer->Add(head, 1, wxEXPAND | wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(1));
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(138)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(138)));
++    panel->SetMinSize(wxSize(-1, FromDIP(138)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(138)));
+     if (wxGetApp().app_config->get("language").find("zh") == 0) {
+         panel->SetFont(Label::Body_16);
+     } else {
+@@ -1405,8 +1405,8 @@ void AICloudService_TipDialog::build_dialog()
+     } else {
+         height = FromDIP(116);
+     }
+-    textInfo->SetMinSize(wxSize(FromDIP(-1), height));
+-    textInfo->SetMaxSize(wxSize(FromDIP(-1), height));
++    textInfo->SetMinSize(wxSize(-1, height));
++    textInfo->SetMaxSize(wxSize(-1, height));
+     textInfo->SetBackgroundColour(bgColor);
+     textInfo->SetForegroundColour(fgColor);
+     panelSizer->Add(textInfo, 0, wxEXPAND | wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(1));
+@@ -1427,8 +1427,8 @@ void AICloudService_TipDialog::build_dialog()
+     
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(26)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(26)));
++    panel->SetMinSize(wxSize(-1, FromDIP(26)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(26)));
+     if (wxGetApp().app_config->get("language").find("zh") == 0) {
+         panel->SetFont(Label::Body_16);
+     } else {
+@@ -1476,8 +1476,8 @@ void AICloudService_TipDialog::build_dialog()
+     panelSizer->Add(text, 1, wxEXPAND | wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(1));
+ 
+     panel = new wxPanel(this, wxID_ANY);
+-    panel->SetMinSize(wxSize(FromDIP(-1), FromDIP(64)));
+-    panel->SetMaxSize(wxSize(FromDIP(-1), FromDIP(64)));
++    panel->SetMinSize(wxSize(-1, FromDIP(64)));
++    panel->SetMaxSize(wxSize(-1, FromDIP(64)));
+     panel->SetFont(Label::Body_16);
+     panel->SetBackgroundColour(bgColor);
+     panel->SetForegroundColour(fgColor);
+diff --git a/src/slic3r/GUI/AboutDialog.cpp b/src/slic3r/GUI/AboutDialog.cpp
+index e3920dd7..b38a2108 100644
+--- a/src/slic3r/GUI/AboutDialog.cpp
++++ b/src/slic3r/GUI/AboutDialog.cpp
+@@ -362,7 +362,7 @@ AboutDialog::AboutDialog()
+           wxColour color = is_dark ? wxColor("#4287FF") : wxColour("#387DFF");
+           wxString website_url = _L("offical_webside");
+ 
+-          //m_email_html->SetMinSize(wxSize(FromDIP(-1), FromDIP(16)));
++          //m_email_html->SetMinSize(wxSize(-1, FromDIP(16)));
+           //m_email_html->SetBackgroundColour(wxColour(122, 122, 122));
+           m_email_html->SetForegroundColour(color);
+           m_email_html->SetLabel(email_url);
+diff --git a/src/slic3r/GUI/AmsMappingPopup.cpp b/src/slic3r/GUI/AmsMappingPopup.cpp
+index 4ed3f573..d859fc67 100644
+--- a/src/slic3r/GUI/AmsMappingPopup.cpp
++++ b/src/slic3r/GUI/AmsMappingPopup.cpp
+@@ -340,7 +340,7 @@ void MaterialItem::doRender(wxDC &dc)
+      m_warning_text->SetFont(::Label::Body_12);
+      auto cant_not_match_tip = _L("Note: Only the CFS slots loaded with the same material type can be selected.");
+      m_warning_text->SetLabel(format_text(cant_not_match_tip));
+-     m_warning_text->SetMinSize(wxSize(FromDIP(248), FromDIP(-1)));
++     m_warning_text->SetMinSize(wxSize(FromDIP(248), -1));
+      m_warning_text->Wrap(FromDIP(248));
+ 
+      m_sizer_main->Add(title_panel, 0, wxEXPAND | wxALL, FromDIP(2));
+diff --git a/src/slic3r/GUI/CreatePresetsDialog.cpp b/src/slic3r/GUI/CreatePresetsDialog.cpp
+index 611c99fe..44a01abd 100644
+--- a/src/slic3r/GUI/CreatePresetsDialog.cpp
++++ b/src/slic3r/GUI/CreatePresetsDialog.cpp
+@@ -27,8 +27,8 @@
+ #define OPTION_SIZE wxSize(FromDIP(100), FromDIP(24))
+ #define PRINTER_LIST_SIZE wxSize(-1, FromDIP(100))
+ #define FILAMENT_LIST_SIZE wxSize(FromDIP(560), FromDIP(100))
+-#define FILAMENT_OPTION_SIZE wxSize(FromDIP(-1), FromDIP(30))
+-#define PRESET_TEMPLATE_SIZE wxSize(FromDIP(-1), FromDIP(100))
++#define FILAMENT_OPTION_SIZE wxSize(-1, FromDIP(30))
++#define PRESET_TEMPLATE_SIZE wxSize(-1, FromDIP(100))
+ #define PRINTER_SPACE_SIZE wxSize(FromDIP(100), FromDIP(24)) // ORCA Match size with other components
+ #define ORIGIN_TEXT_SIZE wxSize(FromDIP(10), FromDIP(24))
+ #define PRINTER_PRESET_VENDOR_SIZE wxSize(FromDIP(150), FromDIP(24))
+@@ -1073,7 +1073,7 @@ wxBoxSizer *CreateFilamentPresetDialog::create_filament_preset_for_printer_item(
+     m_filament_preset_panel->SetBackgroundColour(*wxWHITE);
+     m_filament_preset_panel->SetSize(PRINTER_LIST_SIZE);
+     m_filament_presets_sizer = new wxFlexGridSizer(1, FromDIP(5), FromDIP(5));
+-    // m_filament_presets_sizer->SetMinSize(FromDIP(912), FromDIP(-1));
++    // m_filament_presets_sizer->SetMinSize(FromDIP(912), -1);
+     m_filament_preset_panel->SetSizer(m_filament_presets_sizer);
+     vertical_sizer->Add(m_filament_preset_panel, 0, wxEXPAND | wxTOP | wxALIGN_CENTER_HORIZONTAL, FromDIP(5));
+ 
+@@ -2864,9 +2864,9 @@ wxBoxSizer *CreatePrinterPresetDialog::create_presets_template_item(wxWindow *pa
+     m_scrolled_preset_window = new wxScrolledWindow(parent);
+     m_scrolled_preset_window->SetScrollRate(5, 5);
+     m_scrolled_preset_window->SetBackgroundColour(*wxWHITE);
+-    //m_scrolled_preset_window->SetMinSize(wxSize(FromDIP(1500), FromDIP(-1)));
+-    m_scrolled_preset_window->SetMaxSize(wxSize(FromDIP(1500), FromDIP(-1)));
+-    m_scrolled_preset_window->SetSize(wxSize(FromDIP(1500), FromDIP(-1)));
++    //m_scrolled_preset_window->SetMinSize(wxSize(FromDIP(1500), -1));
++    m_scrolled_preset_window->SetMaxSize(wxSize(FromDIP(1500), -1));
++    m_scrolled_preset_window->SetSize(wxSize(FromDIP(1500), -1));
+     m_scrooled_preset_sizer = new wxBoxSizer(wxHORIZONTAL);
+ 
+     m_preset_template_panel = new wxPanel(m_scrolled_preset_window);
+diff --git a/src/slic3r/GUI/PresetComboBoxes.cpp b/src/slic3r/GUI/PresetComboBoxes.cpp
+index 4170c197..9498634d 100644
+--- a/src/slic3r/GUI/PresetComboBoxes.cpp
++++ b/src/slic3r/GUI/PresetComboBoxes.cpp
+@@ -216,6 +216,7 @@ void PresetComboBox::update_selection()
+ 
+ // A workaround for a set of issues related to text fitting into gtk widgets:
+ #if defined(__WXGTK20__) || defined(__WXGTK3__)
++    if (!GTK_IS_CELL_LAYOUT(m_widget)) return;
+     GList* cells = gtk_cell_layout_get_cells(GTK_CELL_LAYOUT(m_widget));
+ 
+     // 'cells' contains the GtkCellRendererPixBuf for the icon,
+diff --git a/src/slic3r/GUI/UpgradePanel.cpp b/src/slic3r/GUI/UpgradePanel.cpp
+index eaf2c8cf..db5fe8a2 100644
+--- a/src/slic3r/GUI/UpgradePanel.cpp
++++ b/src/slic3r/GUI/UpgradePanel.cpp
+@@ -216,7 +216,7 @@ MachineInfoPanel::MachineInfoPanel(wxWindow* parent, wxWindowID id, const wxPoin
+     m_button_upgrade_firmware->SetBorderColor(btn_bd);
+     m_button_upgrade_firmware->SetTextColor(btn_text);
+     m_button_upgrade_firmware->SetFont(Label::Body_10);
+-    m_button_upgrade_firmware->SetMinSize(wxSize(FromDIP(-1), FromDIP(24)));
++    m_button_upgrade_firmware->SetMinSize(wxSize(-1, FromDIP(24)));
+     m_button_upgrade_firmware->SetCornerRadius(FromDIP(12));
+     m_main_right_sizer->Add(m_button_upgrade_firmware, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, FromDIP(5));
+ 
+@@ -310,9 +310,9 @@ wxPanel *MachineInfoPanel::create_caption_panel(wxWindow *parent)
+ void MachineInfoPanel::msw_rescale() 
+ {
+     rescale_bitmaps();
+-    m_button_upgrade_firmware->SetSize(wxSize(FromDIP(-1), FromDIP(24)));
+-    m_button_upgrade_firmware->SetMinSize(wxSize(FromDIP(-1), FromDIP(24)));
+-    m_button_upgrade_firmware->SetMaxSize(wxSize(FromDIP(-1), FromDIP(24)));
++    m_button_upgrade_firmware->SetSize(wxSize(-1, FromDIP(24)));
++    m_button_upgrade_firmware->SetMinSize(wxSize(-1, FromDIP(24)));
++    m_button_upgrade_firmware->SetMaxSize(wxSize(-1, FromDIP(24)));
+     m_button_upgrade_firmware->SetCornerRadius(FromDIP(12));
+     m_ahb_panel->msw_rescale();
+     for (auto &amspanel : m_amspanel_list) { 
+diff --git a/src/slic3r/GUI/Widgets/SideTools.cpp b/src/slic3r/GUI/Widgets/SideTools.cpp
+index a08a4445..9a5c3536 100644
+--- a/src/slic3r/GUI/Widgets/SideTools.cpp
++++ b/src/slic3r/GUI/Widgets/SideTools.cpp
+@@ -264,9 +264,9 @@ SideTools::SideTools(wxWindow *parent, wxWindowID id, const wxPoint &pos, const
+     m_connection_info->SetTextColor(*wxWHITE);
+     m_connection_info->SetFont(::Label::Body_13);
+     m_connection_info->SetCornerRadius(0);
+-    m_connection_info->SetSize(wxSize(FromDIP(-1), FromDIP(25)));
+-    m_connection_info->SetMinSize(wxSize(FromDIP(-1), FromDIP(25)));
+-    m_connection_info->SetMaxSize(wxSize(FromDIP(-1), FromDIP(25)));
++    m_connection_info->SetSize(wxSize(-1, FromDIP(25)));
++    m_connection_info->SetMinSize(wxSize(-1, FromDIP(25)));
++    m_connection_info->SetMaxSize(wxSize(-1, FromDIP(25)));
+ 
+ 
+     wxBoxSizer* connection_sizer_V = new wxBoxSizer(wxVERTICAL);
+-- 
+2.53.0
+

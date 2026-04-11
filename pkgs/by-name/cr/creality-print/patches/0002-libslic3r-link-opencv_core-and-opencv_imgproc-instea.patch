@@ -1,0 +1,36 @@
+From 6c65b11a4e48c29d348cc715f3a3ee0105b0d865 Mon Sep 17 00:00:00 2001
+From: FlameFlag <github@flameflag.dev>
+Date: Sat, 11 Apr 2026 12:18:19 +0300
+Subject: [PATCH 2/5] libslic3r: link opencv_core and opencv_imgproc instead of
+ opencv_world
+
+---
+ src/libslic3r/CMakeLists.txt | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/src/libslic3r/CMakeLists.txt b/src/libslic3r/CMakeLists.txt
+index 2720e6a3..48b77726 100644
+--- a/src/libslic3r/CMakeLists.txt
++++ b/src/libslic3r/CMakeLists.txt
+@@ -693,14 +693,12 @@ target_link_libraries(libslic3r
+     qoi
+     )
+ 
+-if(TARGET opencv_world)
+-    target_link_libraries(libslic3r opencv_world)
+-endif()
+ 
+-if(TARGET opencv::opencv)
+-    target_link_libraries(libslic3r opencv::opencv)
+-endif()
+ 
++target_link_libraries(libslic3r
++    opencv_core
++    opencv_imgproc
++)
+ if(TARGET nowide)
+     target_link_libraries(libslic3r nowide)
+ endif()
+-- 
+2.53.0
+

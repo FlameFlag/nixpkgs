@@ -1,0 +1,35 @@
+From e2b7529e1c2457bf254c34a93b2b88df21f2c236 Mon Sep 17 00:00:00 2001
+From: FlameFlag <git@ps1.sh>
+Date: Wed, 22 Apr 2026 16:37:14 +0300
+Subject: [PATCH] BitmapComboBox: drop override on OnAddBitmap for clang 21
+ compatibility
+
+wxWidgets 3.1.7 base class declares
+  virtual bool OnAddBitmap(const wxBitmapBundle&);
+but CrealityPrint overrides with
+  bool OnAddBitmap(const wxBitmap&) override;
+
+clang 21 treats a non-matching `override` as a hard error (not a
+warning), so we drop the `override` keyword.  The member is still
+called directly from Append() in the same class; the base class's
+virtual continues to work via the wxBitmapBundle path.
+---
+ src/slic3r/GUI/BitmapComboBox.hpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/slic3r/GUI/BitmapComboBox.hpp b/src/slic3r/GUI/BitmapComboBox.hpp
+index a77bf40..0f967cf 100644
+--- a/src/slic3r/GUI/BitmapComboBox.hpp
++++ b/src/slic3r/GUI/BitmapComboBox.hpp
+@@ -47,7 +47,7 @@ protected:
+  * For this purpose control drawing methods and
+  * control size calculation methods (virtual) are overridden.
+  **/
+-bool OnAddBitmap(const wxBitmap& bitmap) override;
++bool OnAddBitmap(const wxBitmap& bitmap);
+ void OnDrawItem(wxDC& dc, const wxRect& rect, int item, int flags) const override;
+ #endif
+ 
+-- 
+2.53.0
+
