@@ -1,0 +1,58 @@
+Use a prebuilt shaders.metallib instead of invoking xcrun metal/metallib
+
+Apple's Metal compiler is not available under Nix. Build the metallib on macOS
+with `scripts/build-metallib.py`, commit it next to package.nix, and copy it
+into OUT_DIR during the Rust build.
+
+Regenerate with `scripts/build-metallib.py` whenever the pinned warp rev or
+`shaders.metal` changes
+
+--- a/crates/warpui/build.rs
++++ b/crates/warpui/build.rs
+@@ -67,43 +67,10 @@
+ }
+
+ fn compile_metal_shaders() {
+-    let header_path = "src/platform/mac/rendering/metal/shaders/shader_types.h";
+-    let metal_path = "src/platform/mac/rendering/metal/shaders/shaders.metal";
+     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+-
+-    let air_path = out_path.join("shaders.air");
+-    let air_path = air_path.to_str().unwrap();
+-
+-    let lib_path = out_path.join("shaders.metallib");
+-    let lib_path = lib_path.to_str().unwrap();
+-
+-    println!("cargo:rerun-if-changed={header_path}");
+-    println!("cargo:rerun-if-changed={metal_path}");
+-
+-    let mut compile_args = vec!["-sdk", "macosx", "metal", "-c", metal_path, "-o", air_path];
+-    if cfg!(feature = "enable-metal-frame-capture") {
+-        compile_args.push("-frecord-sources");
+-        compile_args.push("-gline-tables-only");
+-    }
+-    let result = Command::new("xcrun")
+-        .args(&compile_args)
+-        .output()
+-        .expect("error compiling metal shaders to .air");
+-    assert!(
+-        result.status.success(),
+-        "error compiling metal shaders to .air; {}",
+-        std::str::from_utf8(&result.stderr).unwrap(),
+-    );
+-
+-    let result = Command::new("xcrun")
+-        .args(["-sdk", "macosx", "metallib", air_path, "-o", lib_path])
+-        .output()
+-        .expect("error compiling metal shaders to .metallib");
+-    assert!(
+-        result.status.success(),
+-        "error compling metal shaders to .metallib; {}",
+-        std::str::from_utf8(&result.stderr).unwrap(),
+-    );
++    println!("cargo:rerun-if-changed=shaders.metallib");
++    std::fs::copy("shaders.metallib", out_path.join("shaders.metallib"))
++        .expect("copy prebuilt shaders.metallib into OUT_DIR");
+ }
+
+ fn compile_objc_lib() {
