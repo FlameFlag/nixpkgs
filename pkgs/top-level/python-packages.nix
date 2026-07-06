@@ -7775,6 +7775,8 @@ self: super: with self; {
 
   hydrus-api = callPackage ../development/python-modules/hydrus-api { };
 
+  hyprpy = callPackage ../development/python-modules/hyprpy { };
+
   hypchat = callPackage ../development/python-modules/hypchat { };
 
   hyper-connections = callPackage ../development/python-modules/hyper-connections { };
