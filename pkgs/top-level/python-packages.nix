@@ -22256,6 +22256,8 @@ self: super: with self; {
 
   xknxproject = callPackage ../development/python-modules/xknxproject { };
 
+  xwaykeyz = callPackage ../development/python-modules/xwaykeyz { };
+
   xlrd = callPackage ../development/python-modules/xlrd { };
 
   xlsx2csv = callPackage ../development/python-modules/xlsx2csv { };
