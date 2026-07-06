@@ -716,6 +716,7 @@
   ./services/hardware/thinkfan.nix
   ./services/hardware/throttled.nix
   ./services/hardware/tlp.nix
+  ./services/hardware/toshy.nix
   ./services/hardware/trezord.nix
   ./services/hardware/triggerhappy.nix
   ./services/hardware/tuned.nix
