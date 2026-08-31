@@ -227,6 +227,9 @@ stdenv.mkDerivation (finalAttrs: {
 
     # Chromium 148 multiplies Plasma's GTK DPI scale by the native Wayland surface
     # scale, which makes the UI too large. See #551645
+    # Keep nixpkgs' glibc ahead of the driver link
+    # "Foreign" distributions may expose an incompatible libc through it. See #558171
+    # Pre-launch helpers unset the path so it does not leak into host tools
     wrapProgramShell $out/opt/${binaryName}/${binaryName} \
         "''${gappsWrapperArgs[@]}" \
         --run 'case ":''${XDG_CURRENT_DESKTOP:-}:" in *:KDE:*) discordKdeWayland=1 ;; *) unset discordKdeWayland ;; esac' \
@@ -238,11 +241,11 @@ stdenv.mkDerivation (finalAttrs: {
         ''} \
         ${lib.strings.optionalString enableAutoscroll "--add-flags \"--enable-blink-features=MiddleClickAutoscroll\""} \
         --prefix XDG_DATA_DIRS : "${gtk3}/share/gsettings-schemas/${gtk3.name}/" \
-        --prefix LD_LIBRARY_PATH : $out/opt/${binaryName}:${addDriverRunpath.driverLink}/lib \
+        --prefix LD_LIBRARY_PATH : $out/opt/${binaryName}:${lib.getLib stdenv.cc.libc}/lib:${addDriverRunpath.driverLink}/lib \
         ${lib.strings.optionalString (!useFHSEnv) "--prefix LD_LIBRARY_PATH : ${finalAttrs.libPath}"} \
         --suffix VK_ADD_DRIVER_FILES : "${addDriverRunpath.driverLink}/share/vulkan/icd.d" \
-        ${lib.strings.optionalString disableUpdates "--run ${lib.getExe finalAttrs.disableBreakingUpdates}"} \
-        --run "${finalAttrs.stageModules} $out/opt/${binaryName}/modules" \
+        ${lib.strings.optionalString disableUpdates "--run '(unset LD_LIBRARY_PATH; ${lib.getExe finalAttrs.disableBreakingUpdates})'"} \
+        --run "(unset LD_LIBRARY_PATH; ${finalAttrs.stageModules} $out/opt/${binaryName}/modules)" \
         --run '[ -t 1 ] || exec > /dev/null 2>&1' \
         --add-flags ${lib.escapeShellArg commandLineArgs}
 
